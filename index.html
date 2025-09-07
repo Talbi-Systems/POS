@@ -1,0 +1,1274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>POS</title>
+<style>
+/* Base styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { 
+  font-family: Arial, sans-serif; 
+  background: #f5f5f5; 
+  color: #333; 
+  display: flex; 
+  flex-direction: column;
+}
+.muted { color: #888; }
+.small { font-size: 12px; }
+.btn { 
+  padding: 10px 15px; 
+  border: none; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-weight: 600; 
+}
+.btn.secondary { background: #e0e0e0; color: #333; }
+.btn.danger { background: #f44336; color: white; }
+.btn:hover { opacity: 0.9; }
+
+/* Login Screen - Made fully adaptive */
+.login-screen {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  background: white; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  z-index: 1000;
+}
+.login-container {
+  background: white; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  width: 90%; 
+  max-width: 900px;
+  height: auto;
+  min-height: 400px;
+  max-height: 90vh;
+  display: flex; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.login-left, .login-right { 
+  padding: 30px; 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.login-left { 
+  flex: 1; 
+  background: #f9f9f9; 
+}
+.login-left h2 { 
+  margin-bottom: 20px; 
+  color: #2c3e50; 
+  font-size: 24px;
+}
+.login-left input {
+  width: 100%; 
+  padding: 12px; 
+  margin-bottom: 15px; 
+  border: 1px solid #ddd;
+  border-radius: 4px; 
+  font-size: 16px;
+}
+.login-right { 
+  flex: 1; 
+  background: #34495e; 
+}
+.keypad { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 10px; 
+}
+.key {
+  background: #ecf0f1; 
+  padding: 20px; 
+  text-align: center; 
+  border-radius: 4px;
+  font-weight: bold; 
+  cursor: pointer; 
+  transition: background 0.2s; 
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.key:hover { background: #bdc3c7; }
+.key[data-action="clear"] { background: #e74c3c; color: white; }
+.key[data-action="ok"] { background: #2ecc71; color: white; }
+
+/* POS Screen - Made fully adaptive */
+#posApp {
+  display: none;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+.app { 
+  display: flex; 
+  height: 100%;
+  padding: 15px; 
+  gap: 15px; 
+  max-width: none;
+}
+.panel { 
+  background: white; 
+  border-radius: 8px; 
+  padding: 15px; 
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cart { 
+  flex: 2; 
+  min-width: 0; /* Allows proper flexbox shrinking */
+}
+.right { 
+  flex: 1; 
+  min-width: 0; /* Allows proper flexbox shrinking */
+  max-width: 400px;
+}
+.cart-head { 
+  display: flex; 
+  justify-content: space-between; 
+  margin-bottom: 15px; 
+}
+.total-big {
+  font-size: 32px; 
+  font-weight: bold; 
+  text-align: center; 
+  margin: 15px 0;
+  padding: 15px; 
+  background: #f8f9fa; 
+  border-radius: 8px;
+}
+
+/* Make cart list scrollable */
+.cart-list { 
+  flex: 1;
+  overflow-y: auto;  /* Enable vertical scrolling */
+  margin-bottom: 10px;
+}
+.cart-list table { width: 100%; border-collapse: collapse; }
+.cart-list th, .cart-list td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+.cart-list th { background: #f8f9fa; font-weight: 600; position: sticky; top: 0; } /* Sticky header */
+.cart-list tr.selected { background-color: #e3f2fd; }
+.cart-list tr:hover { background-color: #f5f5f5; }
+.total-row {
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  margin-top: 15px; 
+  padding-top: 15px; 
+  border-top: 2px solid #eee;
+}
+.badge {
+  background: #3498db; 
+  color: white; 
+  padding: 5px 10px; 
+  border-radius: 4px;
+  font-size: 12px; 
+  font-weight: bold;
+}
+.side-buttons { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+}
+.side-buttons .btn { width: 100%; }
+
+/* Catalog Button */
+.catalog-btn {
+  background: #ccffff; 
+  color: black; 
+  padding: 12px; 
+  border-radius: 6px;
+  text-align: center; 
+  margin-top: 15px; 
+  cursor: pointer; 
+  font-weight: bold;
+}
+.catalog-btn:hover { background: #e6ffff; }
+
+/* Catalog Modal */
+#catalogModal {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  background: rgba(0,0,0,0.5); 
+  display: none; 
+  justify-content: center;
+  align-items: center; 
+  z-index: 1000;
+}
+.catalog-modal-content {
+  background: white; 
+  padding: 20px; 
+  border-radius: 8px; 
+  width: 95%;
+  max-width: 900px; 
+  height: 90vh;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+  display: flex; 
+  flex-direction: column;
+}
+.catalog-header {
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  margin-bottom: 15px; 
+  padding-bottom: 10px; 
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+.catalog-title { font-size: 20px; font-weight: 600; }
+.close-catalog {
+  background: none; 
+  border: none; 
+  font-size: 24px; 
+  cursor: pointer;
+  color: #888;
+}
+
+/* Make product grid scrollable */
+.product-grid-container {
+  flex: 1;
+  overflow-y: auto;
+}
+.product-grid {
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.product-item {
+  background: #f8f9fa; 
+  padding: 12px; 
+  border-radius: 6px; 
+  text-align: center;
+  cursor: pointer; 
+  transition: all 0.2s; 
+  border: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100px;
+}
+.product-item:hover {
+  background: #e9ecef; 
+  transform: translateY(-2px); 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.product-name { 
+  font-weight: 600; 
+  margin-bottom: 5px; 
+  font-size: 14px;
+}
+.product-price { 
+  color: #27ae60; 
+  font-weight: bold; 
+  margin-bottom: 5px; 
+  font-size: 14px;
+}
+.product-code { 
+  font-size: 11px; 
+  color: #7f8c8d; 
+}
+
+/* Modals */
+#managerModal, #payModal {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  background: rgba(0,0,0,0.5); 
+  display: none; 
+  justify-content: center;
+  align-items: center; 
+  z-index: 1000;
+}
+.modal-card {
+  background: white; 
+  padding: 20px; 
+  border-radius: 8px; 
+  width: 95%;
+  max-width: 500px; 
+  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+.modal-header {
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  margin-bottom: 15px; 
+  padding-bottom: 10px; 
+  border-bottom: 1px solid #eee;
+}
+.modal-title { font-size: 18px; font-weight: 600; }
+.close-modal {
+  background: none; 
+  border: none; 
+  font-size: 24px; 
+  cursor: pointer;
+  color: #888;
+}
+
+/* Manager Modal Improvements */
+.manager-keypad {
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 10px;
+  margin: 15px 0;
+}
+.manager-key {
+  padding: 15px; 
+  background: #f0f0f0; 
+  border: none; 
+  border-radius: 6px;
+  font-size: 18px; 
+  font-weight: 600; 
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.manager-key:hover { background: #e0e0e0; }
+.manager-key[data-action="clear"] { background: #e74c3c; color: white; }
+.manager-key[data-action="ok"] { background: #2ecc71; color: white; }
+.manager-actions {
+  display: flex; 
+  gap: 10px; 
+  margin-top: 15px;
+}
+.manager-actions .btn { flex: 1; }
+
+/* Payment Modal */
+.payment-options {
+  display: flex; 
+  gap: 10px; 
+  margin-bottom: 15px;
+}
+.payment-option-btn {
+  flex: 1; 
+  padding: 12px; 
+  border: 2px solid #e0e0e0; 
+  border-radius: 6px;
+  background: white; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: all 0.2s;
+}
+.payment-option-btn.active {
+  border-color: #4CAF50; 
+  background-color: #E8F5E9; 
+  color: #2E7D32;
+}
+.cash-payment-section {
+  margin-top: 15px; 
+  padding-top: 15px; 
+  border-top: 1px solid #eee;
+}
+.cash-input-group { margin-bottom: 15px; }
+.cash-input-group label {
+  display: block; 
+  margin-bottom: 5px; 
+  font-weight: 500;
+}
+.cash-input {
+  width: 100%; 
+  padding: 12px; 
+  border: 1px solid #ddd; 
+  border-radius: 4px;
+  font-size: 16px; 
+  text-align: right;
+}
+.cash-summary {
+  background: #f9f9f9; 
+  padding: 15px; 
+  border-radius: 6px; 
+  margin-bottom: 15px;
+}
+.cash-summary-item {
+  display: flex; 
+  justify-content: space-between; 
+  margin-bottom: 8px;
+}
+.cash-summary-item:last-child {
+  margin-bottom: 0; 
+  font-weight: bold; 
+  font-size: 16px;
+  padding-top: 8px; 
+  border-top: 1px dashed #ddd;
+}
+.cash-keypad {
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.cash-key {
+  padding: 15px; 
+  background: #f0f0f0; 
+  border: none; 
+  border-radius: 6px;
+  font-size: 18px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: background 0.2s;
+}
+.cash-key:hover { background: #e0e0e0; }
+.cash-key:active { background: #d0d0d0; }
+.cash-actions { display: flex; gap: 10px; }
+.cash-actions .btn { flex: 1; }
+
+/* FIXED: Keypad layout and side buttons alignment */
+.keypad-container {
+  display: flex;
+  gap: 12px;
+  height: 100%;
+}
+
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+
+.keypad-key {
+  background: #ccffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.keypad-key:hover {
+  background: #e6ffff;
+}
+
+.side-buttons-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  height: 100%;
+}
+
+.side-buttons-container .btn {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .app { 
+    flex-direction: column; 
+    height: 100%;
+    padding: 10px;
+  }
+  .panel {
+    min-height: auto;
+  }
+  .cart {
+    flex: 3;
+  }
+  .right {
+    flex: 2;
+    max-width: none;
+  }
+  .key, .manager-key, .cash-key, .keypad-key { 
+    padding: 12px; 
+    font-size: 16px; 
+    min-height: 50px;
+  }
+  .cart-list { 
+    max-height: 200px; 
+  }
+  .login-container {
+    flex-direction: column;
+    max-height: 95vh;
+    width: 95%;
+  }
+  .login-left, .login-right {
+    padding: 20px;
+  }
+  .keypad {
+    gap: 8px;
+  }
+  .side-buttons-container .btn {
+    font-size: 12px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app { 
+    padding: 8px;
+    gap: 10px;
+  }
+  .panel {
+    padding: 12px;
+  }
+  .product-grid { 
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+    gap: 8px;
+  }
+  .product-item {
+    padding: 10px;
+    min-height: 90px;
+  }
+  .product-name, .product-price {
+    font-size: 13px;
+  }
+  .total-big {
+    font-size: 28px;
+    padding: 12px;
+    margin: 10px 0;
+  }
+  .payment-options {
+    flex-direction: column;
+  }
+  .login-container {
+    max-width: 95%;
+  }
+  .login-left h2 {
+    font-size: 20px;
+  }
+  .catalog-modal-content {
+    padding: 15px;
+    width: 98%;
+    height: 95vh;
+  }
+  .modal-card {
+    padding: 15px;
+    width: 98%;
+  }
+  .keypad-container {
+    flex-direction: column;
+  }
+  .side-buttons-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .side-buttons-container .btn {
+    flex: 1;
+    min-width: calc(50% - 5px);
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 5px;
+    gap: 8px;
+  }
+  .panel {
+    padding: 10px;
+    border-radius: 6px;
+  }
+  .cart-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .total-row {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .total-row > div {
+    text-align: center;
+  }
+  .key, .manager-key, .cash-key, .keypad-key {
+    padding: 10px;
+    font-size: 14px;
+    min-height: 45px;
+  }
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .login-left, .login-right {
+    padding: 15px;
+  }
+  .keypad {
+    gap: 6px;
+  }
+  .key {
+    padding: 15px;
+  }
+  .side-buttons-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .side-buttons-container .btn {
+    flex: 1;
+    min-width: 45%;
+    font-size: 11px;
+    padding: 6px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-container">
+    <div class="login-left">
+      <h2>Login</h2>
+      <input id="loginUser" type="text" placeholder="Username (123)" />
+      <input id="loginPass" type="password" placeholder="Password (123)" />
+    </div>
+    <div class="login-right">
+      <div class="keypad" id="loginKeypad">
+        <div class="key" data-key="1">1</div>
+        <div class="key" data-key="2">2</div>
+        <div class="key" data-key="3">3</div>
+        <div class="key" data-key="4">4</div>
+        <div class="key" data-key="5">5</div>
+        <div class="key" data-key="6">6</div>
+        <div class="key" data-key="7">7</div>
+        <div class="key" data-key="8">8</div>
+        <div class="key" data-key="9">9</div>
+        <div class="key" data-key="0">0</div>
+        <div class="key" data-action="clear">C</div>
+        <div class="key" data-action="ok">OK</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POS Screen -->
+<div id="posApp">
+  <div class="app">
+    <!-- Cart Panel -->
+    <div class="panel cart">
+      <div class="cart-head">
+        <div>
+          <div style="font-size:20px;font-weight:800">Sale</div>
+          <div class="muted small">Items in current transaction</div>
+        </div>
+        <div class="muted"><strong>FRESKO</strong></div>
+      </div>
+      <div class="total-big" id="totalBig">€0.00</div>
+      
+      <!-- Scrollable cart list -->
+      <div class="cart-list" id="cartList">
+        <table>
+          <thead>
+            <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+          </thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+      </div>
+      
+      <div class="total-row">
+        <div>
+          <div class="muted small">Subtotal</div>
+          <div style="font-size:20px;font-weight:800" id="subtotal">€0.00</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="clearCart" class="btn secondary">Clear</button>
+          <button id="pay" class="btn">Pay</button>
+        </div>
+      </div>
+      
+      <!-- Catalog Button -->
+      <div class="catalog-btn" id="catalogBtn">
+        Product Catalog
+      </div>
+    </div>
+
+    <!-- Keypad & Controls -->
+    <div class="panel right">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div class="badge">Kassa</div>
+          <div class="muted small">Enter code then press PLU or EAN</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="entry" type="text" placeholder="Enter PLU or EAN" style="flex:1" />
+        <button id="clear" class="btn secondary">C</button>
+      </div>
+      
+
+      <div class="keypad-container">
+
+        <div class="keypad-grid">
+          <div class="keypad-key" data-key="7">7</div>
+          <div class="keypad-key" data-key="8">8</div>
+          <div class="keypad-key" data-key="9">9</div>
+          <div class="keypad-key" data-key="4">4</div>
+          <div class="keypad-key" data-key="5">5</div>
+          <div class="keypad-key" data-key="6">6</div>
+          <div class="keypad-key" data-key="1">1</div>
+          <div class="keypad-key" data-key="2">2</div>
+          <div class="keypad-key" data-key="3">3</div>
+          <div class="keypad-key" data-key="0">0</div>
+          <div class="keypad-key" data-key="00">00</div>
+          <div class="keypad-key" data-key=".">.</div>
+        </div>
+        
+        <!-- Side buttons - Now properly aligned with keypad height -->
+        <div class="side-buttons-container">
+          <button id="aantalBtn" class="btn secondary">Aantal</button>
+		  <button id="stornoBtn" class="btn danger">STORNO</button>
+          <button id="pluBtn" class="btn">PLU</button>
+          <button id="eanBtn" class="btn">EAN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Catalog Modal -->
+<div id="catalogModal">
+  <div class="catalog-modal-content">
+    <div class="catalog-header">
+      <div class="catalog-title">Product Catalog</div>
+      <button class="close-catalog">&times;</button>
+    </div>
+    
+    <!-- Scrollable product grid container -->
+    <div class="product-grid-container">
+      <div class="product-grid" id="productGrid">
+        <!-- Products will be inserted here by JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manager Modal - Improved -->
+<div id="managerModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Manager Verification</div>
+      <button class="close-modal">&times;</button>
+    </div>
+    <div style="margin-bottom:15px;">
+      <div class="muted small">Enter manager code to authorize STORNO</div>
+      <input id="managerCodeInput" type="password" class="cash-input" placeholder="Manager Code (123)" />
+    </div>
+    <div class="manager-keypad" id="managerKeypad">
+      <div class="manager-key" data-key="1">1</div>
+      <div class="manager-key" data-key="2">2</div>
+      <div class="manager-key" data-key="3">3</div>
+      <div class="manager-key" data-key="4">4</div>
+      <div class="manager-key" data-key="5">5</div>
+      <div class="manager-key" data-key="6">6</div>
+      <div class="manager-key" data-key="7">7</div>
+      <div class="manager-key" data-key="8">8</div>
+      <div class="manager-key" data-key="9">9</div>
+      <div class="manager-key" data-key="0">0</div>
+      <div class="manager-key" data-action="clear">C</div>
+      <div class="manager-key" data-action="ok">OK</div>
+    </div>
+    <div class="manager-actions">
+      <button id="managerCancelBtn" class="btn secondary">Cancel</button>
+      <button id="managerConfirmBtn" class="btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="payModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Payment Method</div>
+      <button class="close-modal">&times;</button>
+    </div>
+    
+    <div class="payment-options">
+      <button id="cardPayBtn" class="payment-option-btn">Card</button>
+      <button id="cashPayBtn" class="payment-option-btn">Cash</button>
+    </div>
+    
+    <div id="cashPayment" style="display:none;">
+      <div class="cash-input-group">
+        <label>Amount Received</label>
+        <input id="cashInput" type="text" class="cash-input" placeholder="0.00" />
+      </div>
+      
+      <div class="cash-summary">
+        <div class="cash-summary-item">
+          <span>Total Amount:</span>
+          <span id="cashTotal">€0.00</span>
+        </div>
+        <div class="cash-summary-item">
+          <span>Amount Received:</span>
+          <span id="cashReceived">€0.00</span>
+        </div>
+        <div class="cash-summary-item">
+          <span>Change:</span>
+          <span id="cashChange">€0.00</span>
+        </div>
+      </div>
+      
+      <div class="cash-keypad">
+        <div class="cash-key" data-key="7">7</div>
+        <div class="cash-key" data-key="8">8</div>
+        <div class="cash-key" data-key="9">9</div>
+        <div class="cash-key" data-key="4">4</div>
+        <div class="cash-key" data-key="5">5</div>
+        <div class="cash-key" data-key="6">6</div>
+        <div class="cash-key" data-key="1">1</div>
+        <div class="cash-key" data-key="2">2</div>
+        <div class="cash-key" data-key="3">3</div>
+        <div class="cash-key" data-key="0">0</div>
+        <div class="cash-key" data-key="00">00</div>
+        <div class="cash-key" data-key=".">.</div>
+        <div class="cash-key" data-action="backspace">⌫</div>
+        <div class="cash-key" data-action="clear">C</div>
+        <div class="cash-key" data-action="ok" style="grid-column: span 2; background: #4CAF50; color: white;">OK</div>
+      </div>
+      
+      <div class="cash-actions">
+        <button id="cashCancelBtn" class="btn secondary">Cancel</button>
+        <button id="completeCashPayment" class="btn" disabled>Complete Payment</button>
+      </div>
+    </div>
+    
+    <div id="cardPayment" style="display:none; text-align: center; padding: 20px 0;">
+      <div style="font-size: 16px; margin-bottom: 15px;">Card payment processing...</div>
+      <button id="completeCardPayment" class="btn">Complete Card Payment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// === PRODUCT CATALOG ===
+const catalog = [
+  {name:'Apple 1kg', plu:'401', ean:'871234500001', price:1.99},
+  {name:'Banana 1kg', plu:'403', ean:'871234500003', price:1.49},
+  {name:'Basket', plu:'3001', ean:'300100000000', price:12.00},
+  {name:'Orange 1kg', plu:'402', ean:'871234500002', price:2.49},
+  {name:'Milk 1L', plu:'501', ean:'871234500101', price:1.79},
+  {name:'Bread', plu:'601', ean:'871234500201', price:2.99},
+  {name:'Eggs 6pcs', plu:'701', ean:'871234500301', price:2.29},
+  {name:'Butter 250g', plu:'801', ean:'871234500401', price:2.49},
+  {name:'Cheese 200g', plu:'901', ean:'871234500501', price:3.49},
+  {name:'Yogurt', plu:'1001', ean:'871234500601', price:1.19},
+  {name:'Tomato 1kg', plu:'404', ean:'871234500004', price:2.99},
+  {name:'Cucumber', plu:'405', ean:'871234500005', price:1.29},
+  {name:'Potato 2kg', plu:'406', ean:'871234500006', price:3.49},
+  {name:'Onion 1kg', plu:'407', ean:'871234500007', price:1.79},
+  {name:'Carrot 1kg', plu:'408', ean:'871234500008', price:1.39},
+  {name:'Lettuce', plu:'409', ean:'871234500009', price:1.99},
+  {name:'Chicken 1kg', plu:'410', ean:'871234500010', price:8.99},
+  {name:'Beef 1kg', plu:'411', ean:'871234500011', price:12.99},
+  {name:'Fish 1kg', plu:'413', ean:'871234500013', price:11.99}
+];
+
+// === STATE ===
+let cart=[], selectedIndex=-1, quantity=1;
+const entry=document.getElementById('entry'),
+      cartBody=document.getElementById('cartBody'),
+      subtotalEl=document.getElementById('subtotal'),
+      totalBigEl=document.getElementById('totalBig'),
+      productGrid=document.getElementById('productGrid'),
+      catalogModal = document.getElementById('catalogModal'),
+      catalogBtn = document.getElementById('catalogBtn');
+
+// === LOGIN ===
+const loginScreen=document.getElementById('loginScreen'),
+      loginUser=document.getElementById('loginUser'),
+      loginPass=document.getElementById('loginPass'),
+      posApp=document.getElementById('posApp');
+let activeInput=loginUser;
+loginUser.addEventListener('focus',()=>activeInput=loginUser);
+loginPass.addEventListener('focus',()=>activeInput=loginPass);
+document.querySelectorAll('#loginKeypad .key').forEach(k=>{
+  if(k.dataset.key) k.addEventListener('click',()=>activeInput.value+=k.dataset.key);
+  else if(k.dataset.action==='clear') k.addEventListener('click',()=>activeInput.value='');
+  else if(k.dataset.action==='ok') k.addEventListener('click',attemptLogin);
+});
+
+// Define valid users
+const validUsers = [
+ //manager codes:
+  {username: '1', password: '529'},
+  {username: '2', password: '841'},
+  {username: '3', password: '173'},
+  {username: '4', password: '366'},
+  //staff codes:
+  {username: '209', password: '158'},
+  {username: '257', password: '902'},
+  {username: '283', password: '614'},
+  {username: '240', password: '240'},
+  {username: '262', password: '459'},
+  {username: '295', password: '518'},
+];
+
+function attemptLogin(){
+  const isValid = validUsers.some(user => 
+    loginUser.value === user.username && loginPass.value === user.password
+  );
+  
+  if(isValid){
+    loginScreen.style.display='none';
+    posApp.style.display='block';
+    renderProductCatalog();
+  } else {
+    alert('Wrong credentials');
+  }
+}
+
+// === PRODUCT CATALOG ===
+function renderProductCatalog() {
+  productGrid.innerHTML = '';
+  catalog.forEach(product => {
+    const productEl = document.createElement('div');
+    productEl.className = 'product-item';
+    productEl.innerHTML = `
+      <div class="product-name">${product.name}</div>
+      <div class="product-price">€${product.price.toFixed(2)}</div>
+      <div class="product-code">PLU: ${product.plu}</div>
+    `;
+    productEl.addEventListener('click', () => {
+      addToCart(product);
+      catalogModal.style.display = 'none';
+    });
+    productGrid.appendChild(productEl);
+  });
+}
+
+// Open catalog modal
+catalogBtn.addEventListener('click', () => {
+  catalogModal.style.display = 'flex';
+});
+
+// Close catalog modal
+document.querySelector('.close-catalog').addEventListener('click', () => {
+  catalogModal.style.display = 'none';
+});
+
+// === CART ===
+function addToCart(p,qty=1){const f=cart.find(i=>i.plu===p.plu);if(f)f.qty+=qty;else cart.push({...p,qty});renderCart();}
+function renderCart(){
+  cartBody.innerHTML='';let sum=0;
+  cart.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    if(i === selectedIndex) tr.className = 'selected';
+    tr.innerHTML=`<td>${it.name}</td><td>${it.qty}</td><td>€${(it.price*it.qty).toFixed(2)}</td>`;
+    tr.onclick=()=>{selectedIndex=i;renderCart();};
+    cartBody.appendChild(tr);sum+=it.price*it.qty;
+  });
+  subtotalEl.textContent='€'+sum.toFixed(2);
+  totalBigEl.textContent='€'+sum.toFixed(2);
+}
+
+// === POS BUTTONS ===
+// Fix for the keypad functionality
+document.querySelectorAll('.keypad-key').forEach(k => {
+  k.addEventListener('click', () => {
+    if (k.dataset.key) {
+      entry.value += k.dataset.key;
+    }
+  });
+});
+
+document.getElementById('clear').onclick = () => entry.value = '';
+document.getElementById('pluBtn').onclick = () => {
+  const p = catalog.find(x => x.plu === entry.value);
+  if (p) {
+    addToCart(p, quantity);
+    entry.value = '';
+    quantity = 1;
+  } else {
+    alert('PLU not found');
+  }
+};
+document.getElementById('eanBtn').onclick = () => {
+  const p = catalog.find(x => x.ean === entry.value);
+  if (p) {
+    addToCart(p, quantity);
+    entry.value = '';
+    quantity = 1;
+  } else {
+    alert('EAN not found');
+  }
+};
+document.getElementById('aantalBtn').onclick = () => {
+  quantity = parseInt(entry.value) || 1;
+  entry.value = '';
+};
+document.getElementById('clearCart').onclick = () => {
+  cart = [];
+  selectedIndex = -1;
+  renderCart();
+};
+
+// === STORNO ===
+const managerModal=document.getElementById('managerModal'), 
+      managerCodeInput=document.getElementById('managerCodeInput'),
+      managerConfirmBtn=document.getElementById('managerConfirmBtn');
+      
+document.getElementById('stornoBtn').onclick=()=>{
+  if(selectedIndex<0)return alert('Please select an item first');
+  const item=cart[selectedIndex];
+  if(item.price*item.qty>10){
+    managerModal.style.display='flex'; 
+    managerCodeInput.value='';
+  } else {
+    cart.splice(selectedIndex,1);
+    selectedIndex=-1;
+    renderCart();
+  }
+};
+
+// Close manager modal
+document.querySelector('#managerModal .close-modal').onclick=()=>{
+  managerModal.style.display='none';
+};
+document.getElementById('managerCancelBtn').onclick=()=>{
+  managerModal.style.display='none';
+};
+
+// Manager keypad functionality
+document.querySelectorAll('#managerKeypad .manager-key').forEach(k=>{
+  k.addEventListener('click', () => {
+    if(k.dataset.key) {
+      managerCodeInput.value += k.dataset.key;
+    } else if(k.dataset.action==='clear') {
+      managerCodeInput.value = '';
+    } else if(k.dataset.action==='ok') {
+      verifyManagerCode();
+    }
+  });
+});
+
+// Confirm button for manager verification
+managerConfirmBtn.onclick = verifyManagerCode;
+
+function verifyManagerCode() {
+  // Define an array of valid manager codes
+  const validManagerCodes = ['529', '841', '173', '366'];
+
+  // Check if the input value is in the array
+  if (validManagerCodes.includes(managerCodeInput.value)) {
+    cart.splice(selectedIndex, 1);
+    selectedIndex = -1;
+    renderCart();
+    managerModal.style.display = 'none';
+  } else {
+    alert('Wrong manager code');
+  }
+}
+
+// === PAY - IMPROVED
+const payModal = document.getElementById('payModal');
+const cashPayment = document.getElementById('cashPayment');
+const cardPayment = document.getElementById('cardPayment');
+const cashInput = document.getElementById('cashInput');
+const cashTotal = document.getElementById('cashTotal');
+const cashReceived = document.getElementById('cashReceived');
+const cashChange = document.getElementById('cashChange');
+const completeCashPayment = document.getElementById('completeCashPayment');
+const completeCardPayment = document.getElementById('completeCardPayment');
+const closeModal = document.querySelector('.close-modal');
+const paymentOptionBtns = document.querySelectorAll('.payment-option-btn');
+
+// Show payment modal
+document.getElementById('pay').onclick = () => {
+  if (!cart.length) return alert('Cart is empty');
+  payModal.style.display = 'flex';
+  cashPayment.style.display = 'none';
+  cardPayment.style.display = 'none';
+  
+  // Reset payment options
+  paymentOptionBtns.forEach(btn => btn.classList.remove('active'));
+};
+
+// Close modal
+closeModal.onclick = () => {
+  payModal.style.display = 'none';
+};
+// === CLEAR CART WITH MANAGER VERIFICATION ===
+document.getElementById('clearCart').onclick = () => {
+  const total = calculateTotal();
+  
+  if (total > 40) {
+    // Show manager verification for clearing cart with total above €40
+    managerModal.style.display = 'flex';
+    managerCodeInput.value = '';
+    managerConfirmBtn.onclick = verifyClearCart;
+  } else {
+    // Clear cart directly if total is €40 or less
+    cart = [];
+    selectedIndex = -1;
+    renderCart();
+  }
+};
+
+function verifyClearCart() {
+  // Define an array of valid manager codes
+  const validManagerCodes = ['529', '841', '173', '366'];
+
+  // Check if the input value is in the array
+  if (validManagerCodes.includes(managerCodeInput.value)) {
+    cart = [];
+    selectedIndex = -1;
+    renderCart();
+    managerModal.style.display = 'none';
+    
+    // Reset the onclick handler for future STORNO operations
+    managerConfirmBtn.onclick = verifyManagerCode;
+  } else {
+    alert('Wrong manager code');
+  }
+}
+
+function calculateTotal() {
+  return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+}
+
+// Payment option selection
+paymentOptionBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    paymentOptionBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    if (btn.id === 'cashPayBtn') {
+      cashPayment.style.display = 'block';
+      cardPayment.style.display = 'none';
+      cashTotal.textContent = totalBigEl.textContent;
+      cashInput.value = '';
+      updateCashSummary();
+    } else if (btn.id === 'cardPayBtn') {
+      cashPayment.style.display = 'none';
+      cardPayment.style.display = 'block';
+    }
+  });
+});
+
+// Cash keypad functionality
+document.querySelectorAll('#cashPayment .cash-key').forEach(k => {
+  k.addEventListener('click', () => {
+    if (k.dataset.key) {
+      // Prevent adding multiple decimal points
+      if (k.dataset.key === '.' && cashInput.value.includes('.')) return;
+      
+      // If empty, start with 0. if adding a decimal
+      if (cashInput.value === '' && k.dataset.key === '.') {
+        cashInput.value = '0.';
+      } 
+      // If empty, just add the number
+      else if (cashInput.value === '' && k.dataset.key !== '.') {
+        cashInput.value = k.dataset.key;
+      }
+      // Otherwise append
+      else {
+        cashInput.value += k.dataset.key;
+      }
+    } 
+    else if (k.dataset.action === 'clear') {
+      cashInput.value = '';
+    }
+    else if (k.dataset.action === 'backspace') {
+      cashInput.value = cashInput.value.slice(0, -1);
+    }
+    else if (k.dataset.action === 'ok') {
+      processCashPayment();
+    }
+    
+    updateCashSummary();
+  });
+});
+
+// Update cash summary when input changes
+cashInput.addEventListener('input', updateCashSummary);
+
+function updateCashSummary() {
+  const received = parseFloat(cashInput.value) || 0;
+  const total = parseFloat(totalBigEl.textContent.replace('€', '')) || 0;
+  const change = received - total;
+  
+  cashReceived.textContent = '€' + received.toFixed(2);
+  cashChange.textContent = '€' + (change >= 0 ? change.toFixed(2) : '0.00');
+  
+  // Enable/disable complete payment button based on sufficient funds
+  completeCashPayment.disabled = received < total;
+}
+
+function processCashPayment() {
+  const received = parseFloat(cashInput.value) || 0;
+  const total = parseFloat(totalBigEl.textContent.replace('€', '')) || 0;
+  
+  if (received < total) {
+    alert('Received amount is less than total');
+    return;
+  }
+  
+  const change = received - total;
+  alert(`Cash payment successful. Change: €${change.toFixed(2)}`);
+  
+  // Reset and close
+  cart = [];
+  selectedIndex = -1;
+  renderCart();
+  payModal.style.display = 'none';
+}
+
+// Complete cash payment button
+completeCashPayment.onclick = processCashPayment;
+
+// Card payment
+completeCardPayment.onclick = () => {
+  alert('Card payment processed successfully');
+  cart = [];
+  selectedIndex = -1;
+  renderCart();
+  payModal.style.display = 'none';
+};
+
+// Cancel cash payment
+document.getElementById('cashCancelBtn').onclick = () => {
+  cashPayment.style.display = 'none';
+  paymentOptionBtns.forEach(btn => btn.classList.remove('active'));
+};
+
+// === AANTAL FUNCTIONALITY FOR CATALOG ===
+document.getElementById('aantalBtn').onclick = () => {
+  quantity = parseInt(entry.value) || 1;
+  entry.value = '';
+};
+
+// Update the catalog product click handler
+function renderProductCatalog() {
+  productGrid.innerHTML = '';
+  catalog.forEach(product => {
+    const productEl = document.createElement('div');
+    productEl.className = 'product-item';
+    productEl.innerHTML = `
+      <div class="product-name">${product.name}</div>
+      <div class="product-price">€${product.price.toFixed(2)}</div>
+      <div class="product-code">PLU: ${product.plu}</div>
+    `;
+    productEl.addEventListener('click', () => {
+      addToCart(product, quantity); // Use the global quantity variable
+      catalogModal.style.display = 'none';
+      quantity = 1; // Reset quantity after adding
+    });
+    productGrid.appendChild(productEl);
+  });
+}
+</script>
+</body>
+</html>
